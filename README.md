@@ -33,6 +33,10 @@ curl -X POST localhost:8000/predict -H "Content-Type: application/json" \
 {"predicted_rent": 1142.54, "model_name": "LGBMRegressor", "timestamp": "..."}
 ```
 
+```bash
+streamlit run app/streamlit_app.py   # web UI at http://localhost:8501
+```
+
 Same flat in Marzahn (`"geo_plz": "12619", "geo_bln": "Marzahn"`) returns about 613 €. Interactive docs are at `/docs`.
 
 ## Results

@@ -70,6 +70,13 @@ def filter_berlin(df: pd.DataFrame, region_col: str = "regio1") -> pd.DataFrame:
     return berlin_df
 
 
+def _ortsteil(regio3: str) -> str:
+    """'Mitte_Mitte' -> 'Mitte', 'Alt_Hohenschönhausen_Hohenschönhausen' -> 'Alt Hohenschönhausen'."""
+    t = regio3.split("_")
+    h = len(t) // 2
+    return " ".join(t[:h] if len(t) % 2 == 0 and t[:h] == t[h:] else t[:-1])
+
+
 def load_berlin_data(file_path: Optional[Path] = None) -> pd.DataFrame:
     """
     Load and filter data to Berlin only.
@@ -84,6 +91,6 @@ def load_berlin_data(file_path: Optional[Path] = None) -> pd.DataFrame:
     # Map Kaggle schema to pipeline schema; district (Ortsteil) lives in regio3, e.g. "Mitte_Mitte"
     df = df.rename(columns={"noRooms": "rooms", "balcony": "hasBalcony", "garden": "hasGarden"})
     if "regio3" in df.columns:
-        df["geo_bln"] = df["regio3"].str.split("_").str[0]
+        df["geo_bln"] = df["regio3"].map(_ortsteil)
     df["geo_plz"] = df["geo_plz"].astype(str)
     return df

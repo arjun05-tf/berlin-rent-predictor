@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from berlinrentml.config import MODELS_DIR
 from berlinrentml.modeling.training import load_model_artifacts
-from berlinrentml.features import FeatureEngineer
+from berlinrentml.inference import predict_rent
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -134,32 +134,7 @@ async def predict(request: PredictionRequest):
         raise HTTPException(status_code=503, detail="Model not loaded. Run training first.")
 
     try:
-        # Convert request to DataFrame
-        import pandas as pd
-
-        input_dict = request.model_dump()
-        df = pd.DataFrame([input_dict])
-
-        # Engineer features
-        engineer = FeatureEngineer()
-        df_features = engineer.engineer_features(df)
-
-        # Ensure all required features are present
-        for feat in feature_names:
-            if feat not in df_features.columns:
-                df_features[feat] = None  # Will be handled by preprocessor
-
-        # Select only the features the model was trained on
-        df_features = df_features[feature_names]
-
-        # Preprocess
-        X_processed = preprocessor.transform(df_features)
-
-        # Predict
-        prediction = model.predict(X_processed)[0]
-
-        # Round to 2 decimal places
-        prediction = round(float(prediction), 2)
+        prediction = predict_rent(request.model_dump(), model, preprocessor, feature_names)
 
         return PredictionResponse(
             predicted_rent=prediction,
