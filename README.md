@@ -23,6 +23,7 @@ Berlin listings cluster by location, so a random train/test split leaks neighbou
 ```bash
 pip install -e ".[dev]"
 python scripts/train.py            # trains, compares models, saves models/
+python scripts/tune.py             # tuned log-rent model + 90% intervals (overwrites models/)
 python scripts/analyze_errors.py   # error by district, size and price range
 python scripts/explain_model.py    # SHAP feature importance
 pytest                             # run tests
@@ -41,7 +42,7 @@ curl -X POST localhost:8000/predict -H "Content-Type: application/json" \
 ```
 
 ```json
-{"predicted_rent": 1142.54, "model_name": "LGBMRegressor", "timestamp": "..."}
+{"predicted_rent": 1197.21, "interval_low": 837.13, "interval_high": 1711.99, "model_name": "LGBMRegressor", "timestamp": "..."}
 ```
 
 Same flat in Marzahn (`"geo_plz": "12619", "geo_bln": "Marzahn"`) returns about 613 €. Interactive docs are at `/docs`.
@@ -57,6 +58,24 @@ Same flat in Marzahn (`"geo_plz": "12619", "geo_bln": "Marzahn"`) returns about 
 - **Where it fails:** the model is least accurate in expensive central districts and for large flats, which it under-prices.
 
 ![MAE by district](docs/error_by_district.png)
+
+## Beyond a baseline
+
+`python scripts/tune.py` goes further than a single fit. It splits by postal code into train, calibration and test sets, so every number is for neighbourhoods the model never saw.
+
+| LightGBM variant | MAE (€) | R² |
+|---|---|---|
+| Default, raw rent target | 195.6 | 0.835 |
+| Log-rent target | 193.3 | 0.832 |
+| Log-rent, tuned (40-candidate search, postal-code grouped CV) | **190.7** | 0.831 |
+
+The gains are small, and the README says so on purpose: the limit is the data (asking rents, no address, no photos), not the algorithm.
+
+- **Prediction intervals.** Split-conformal intervals from out-of-fold residuals on unseen postal codes. The 90% interval covered 88.5% of test listings, with a median width of about €615. Coverage is weaker in rare, expensive districts (Grunewald: 59%), which the notebook shows.
+- **Experiment tracking.** Each tuning run is logged to MLflow (`mlflow ui --backend-store-uri sqlite:///mlflow.db`).
+- **Drift monitoring.** The API logs requests to `logs/requests.jsonl`. `python scripts/check_drift.py` computes the Population Stability Index of live inputs against the training data.
+- **Notebooks.** [01 · EDA and the leakage trap](notebooks/01_eda_and_leakage.ipynb) and [02 · Modeling and uncertainty](notebooks/02_modeling_and_uncertainty.ipynb), executed with outputs.
+- **Reproducibility.** `make all` runs train, tune, analysis and tests. CI also trains on synthetic data, starts the API and calls `/predict` as an end-to-end smoke test.
 
 ## What is inside
 
@@ -125,7 +144,7 @@ tests/         unit and API tests
 - The data is from 2018 to 2020. Predictions reflect past rents, not today's market.
 - Offered rents are asking prices, not signed contracts.
 - Postal codes unseen in training fall back on the other features, and accuracy drops (about €31 MAE worse than the random split).
-- The final model uses default LightGBM parameters. Tuning is future work.
+- Intervals under-cover in rare, expensive districts, and the model under-prices large high-end flats.
 
 See [MODEL_CARD.md](MODEL_CARD.md) for intended use and ethical considerations.
 
