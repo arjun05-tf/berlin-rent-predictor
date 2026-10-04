@@ -20,8 +20,17 @@ Berlin listings cluster by location, so a random train/test split leaks neighbou
 
 ```bash
 pip install -e ".[dev]"
-python scripts/train.py                          # trains, compares models, saves models/
-uvicorn berlinrentml.api.main:app --port 8000    # serves the model
+python scripts/train.py            # trains, compares models, saves models/
+python scripts/analyze_errors.py   # error by district, size and price range
+python scripts/explain_model.py    # SHAP feature importance
+pytest                             # run tests
+streamlit run app/streamlit_app.py # web UI at http://localhost:8501
+```
+
+Or serve the REST API instead of the UI:
+
+```bash
+uvicorn berlinrentml.api.main:app --port 8000
 ```
 
 ```bash
@@ -31,10 +40,6 @@ curl -X POST localhost:8000/predict -H "Content-Type: application/json" \
 
 ```json
 {"predicted_rent": 1142.54, "model_name": "LGBMRegressor", "timestamp": "..."}
-```
-
-```bash
-streamlit run app/streamlit_app.py   # web UI at http://localhost:8501
 ```
 
 Same flat in Marzahn (`"geo_plz": "12619", "geo_bln": "Marzahn"`) returns about 613 €. Interactive docs are at `/docs`.
