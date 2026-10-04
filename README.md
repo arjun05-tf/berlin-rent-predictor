@@ -1,418 +1,135 @@
+<div align="center">
+
 # BerlinRentML
 
-**Spatially Robust Berlin Rental Price Prediction**
+**Predict Berlin apartment rents. Validated on postal codes the model has never seen.**
 
-A production-grade end-to-end machine learning system for predicting monthly cold rent (Kaltmiete) for apartments in Berlin, with explicit focus on geographic generalization and leakage prevention.
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Model](https://img.shields.io/badge/model-LightGBM-orange)
+![API](https://img.shields.io/badge/API-FastAPI-009688)
+![Docker](https://img.shields.io/badge/docker-ready-2496ED)
 
----
+</div>
 
-## 🎯 Project Overview
+An end-to-end ML system that predicts monthly cold rent (`baseRent`) for Berlin apartments from about 10,000 real ImmoScout24 listings. It cleans the data, engineers features, compares seven models, serves the best one through a FastAPI endpoint, and ships with tests, Docker and CI.
 
-This project demonstrates serious ML engineering practices:
+Berlin listings cluster by location, so a random train/test split leaks neighbourhood information and flatters the score. This project also evaluates with a **postal-code grouped split**, where every test postal code is unseen during training.
 
-- **Real dataset** from ImmobilienScout24 (Germany's largest real estate platform)
-- **Rigorous evaluation** with multiple split strategies (random, grouped, spatial)
-- **Leakage prevention** as a first-class requirement
-- **Geographic generalization** testing
-- **Production-ready API** with FastAPI
-- **Comprehensive testing** suite
-- **Docker containerization**
-- **CI/CD** with GitHub Actions
-
-### Why This Matters
-
-Berlin rental listings are geographically clustered. A naive random train/test split can produce deceptively optimistic results because nearby apartments appear in both sets. This project explicitly addresses spatial leakage and tests whether the model can generalize to unseen geographic regions.
-
----
-
-## 📊 Dataset
-
-**Source**: [Apartment Rental Offers in Germany](https://www.kaggle.com/datasets/corrieaar/apartment-rental-offers-in-germany) (Kaggle)
-
-- **Platform**: ImmobilienScout24
-- **Scope**: ~250,000+ listings across Germany (filtered to Berlin)
-- **Target**: `baseRent` (monthly cold rent in €)
-- **Features**: Property characteristics, amenities, location, construction year
-
-See [data/DATASET.md](data/DATASET.md) for details.
-
----
-
-## 🏗️ Architecture
-
-```
-BerlinRentML/
-├── data/
-│   ├── raw/              # Raw dataset (download via script)
-│   └── processed/        # Cleaned and processed data
-├── src/berlinrentml/
-│   ├── data/             # Data loading, validation, cleaning
-│   ├── features/         # Feature engineering, preprocessing
-│   ├── modeling/         # Training, evaluation, splitting strategies
-│   └── api/              # FastAPI inference service
-├── scripts/
-│   ├── download_data.py  # Download dataset
-│   ├── train.py          # Main training pipeline
-│   ├── analyze_errors.py # Error analysis
-│   └── explain_model.py  # SHAP explainability
-├── tests/                # Unit and integration tests
-├── models/               # Saved model artifacts
-└── Dockerfile            # API containerization
-```
-
----
-
-## 🚀 Quick Start
-
-### 1. Installation
+## 30-second quick start
 
 ```bash
-# Clone repository
-git clone <repository-url>
-cd BerlinRentML
-
-# Install dependencies
-pip install -e .
-pip install -e ".[dev]"  # For development
+pip install -e ".[dev]"
+python scripts/train.py                          # trains, compares models, saves models/
+uvicorn berlinrentml.api.main:app --port 8000    # serves the model
 ```
-
-### 2. Download Dataset
 
 ```bash
-# Option A: Using Kaggle CLI (recommended)
-pip install kaggle
-# Configure Kaggle API token (see data/DATASET.md)
-python scripts/download_data.py
-
-# Option B: Manual download
-# 1. Visit https://www.kaggle.com/datasets/corrieaar/apartment-rental-offers-in-germany
-# 2. Download CSV
-# 3. Place in data/raw/
+curl -X POST localhost:8000/predict -H "Content-Type: application/json" \
+  -d '{"livingSpace": 60, "rooms": 2, "geo_plz": "10115", "geo_bln": "Mitte"}'
 ```
 
-### 3. Train Model
-
-```bash
-python scripts/train.py
-```
-
-This will:
-- Load and validate data
-- Clean and engineer features
-- Train multiple models (baselines, linear, Random Forest, LightGBM)
-- Evaluate on random AND grouped splits
-- Select best model based on geographic generalization
-- Save model artifacts to `models/`
-
-### 4. Run API
-
-```bash
-python src/berlinrentml/api/main.py
-```
-
-API will be available at `http://localhost:8000`
-
-Documentation: `http://localhost:8000/docs`
-
-### 5. Run Tests
-
-```bash
-pytest tests/ -v
-```
-
----
-
-## 📈 Evaluation Methodology
-
-### Split Strategies
-
-We implement and compare multiple evaluation strategies:
-
-#### 1. **Random Split** (Baseline)
-Standard 80/20 train/test split. Shows what most projects report but may be optimistic.
-
-#### 2. **Grouped Split** (Geographic Awareness)
-Groups by postal code before splitting. Ensures no postal code appears in both train and test.
-
-#### 3. **Spatial Holdout** (Geographic Generalization)
-Holds out entire districts for testing. Tests whether the model can predict in completely unseen regions.
-
-#### 4. **Temporal Split** (If dates available)
-Trains on older listings, tests on newer ones.
-
-### Why This Matters
-
-If Random Split gives dramatically better results than Grouped/Spatial splits, it suggests the model is memorizing location-specific patterns rather than learning transferable relationships between features and rent.
-
----
-
-## 🛡️ Leakage Prevention
-
-Leakage is treated as a critical ML requirement:
-
-### Investigated Leakage Sources
-
-- ✅ **Target leakage**: No target-derived features
-- ✅ **Warm-rent leakage**: Using `baseRent` (cold rent), not `totalRent`
-- ✅ **Preprocessing leakage**: All transformers fitted on training data only
-- ✅ **Duplicate leakage**: Duplicates removed
-- ✅ **Geographic leakage**: Location encoded carefully to avoid overfitting
-- ✅ **Temporal leakage**: No future information in features
-
-### Preprocessing Pipeline
-
-```python
-from berlinrentml.features.preprocessing import LeakageSafePreprocessor
-
-# Fit on training data ONLY
-preprocessor = LeakageSafePreprocessor(numeric_features, categorical_features)
-X_train_processed = preprocessor.fit_transform(X_train)
-
-# Apply to test data (using training statistics)
-X_test_processed = preprocessor.transform(X_test)
-```
-
----
-
-## 🎯 Model Selection
-
-Models evaluated:
-- Mean/Median predictors (baselines)
-- Linear regression
-- Ridge regression
-- Random Forest
-- LightGBM
-- XGBoost
-
-**Selection Criterion**: Model selected based on **grouped split performance** (geographic generalization), not random split performance.
-
----
-
-## 📊 Results
-
-(Results will be populated after running training pipeline)
-
-### Performance Metrics
-
-| Split Strategy | MAE (€) | RMSE (€) | R² |
-|----------------|---------|----------|-----|
-| Random Split   | TBD     | TBD      | TBD |
-| Grouped Split  | TBD     | TBD      | TBD |
-| Spatial Holdout| TBD     | TBD      | TBD |
-
-### Error Analysis
-
-- Performance by price range
-- Performance by apartment size
-- Performance by district
-- Residual analysis
-- Worst predictions analysis
-
-See `scripts/analyze_errors.py` for details.
-
----
-
-## 🔍 Explainability
-
-SHAP (SHapley Additive exPlanations) analysis:
-
-```bash
-python scripts/explain_model.py
-```
-
-Provides:
-- Global feature importance
-- Individual prediction explanations
-- Feature contribution analysis
-
----
-
-## 🌐 API Usage
-
-### Endpoints
-
-#### `GET /health`
-Health check
-
-```bash
-curl http://localhost:8000/health
-```
-
-#### `GET /model/info`
-Model metadata
-
-```bash
-curl http://localhost:8000/model/info
-```
-
-#### `POST /predict`
-Make prediction
-
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "livingSpace": 70,
-    "rooms": 3,
-    "floor": 2,
-    "yearConstructed": 2000,
-    "geo_plz": "10115",
-    "hasKitchen": true,
-    "hasBalcony": true
-  }'
-```
-
-Response:
 ```json
-{
-  "predicted_rent": 1250.50,
-  "model_name": "LGBMRegressor",
-  "timestamp": "2026-10-04T03:00:00.000Z"
-}
+{"predicted_rent": 1142.54, "model_name": "LGBMRegressor", "timestamp": "..."}
 ```
 
----
+Same flat in Marzahn (`"geo_plz": "12619", "geo_bln": "Marzahn"`) returns about 613 €. Interactive docs are at `/docs`.
 
-## 🐳 Docker
+## Results
 
-### Build Image
+10,388 Berlin listings after cleaning, 80/20 split, final model LightGBM.
+
+| Model | MAE random (€) | MAE grouped (€) |
+|---|---|---|
+| Mean baseline | 535 | 550 |
+| Median baseline | 509 | 507 |
+| Linear regression | 186 | 291 |
+| Ridge | 186 | 202 |
+| Random forest | 182 | 208 |
+| **LightGBM** | **162** | **194** |
+
+LightGBM reaches R² 0.880 on the random split and 0.836 on the grouped split. Linear regression degrades most on unseen postal codes, which is the leakage effect the grouped split is built to expose. The final model is chosen by grouped-split MAE, not random-split MAE.
+
+## What is inside
+
+| Area | What it does |
+|---|---|
+| Data | Loads the Kaggle CSV, filters to Berlin, maps columns, validates schema and ranges |
+| Cleaning | Removes impossible values, caps rent outliers, handles missing data |
+| Features | Building age, size and age bins, log size, rooms per m², amenity score |
+| Evaluation | Random split and `GroupedSplit` by postal code, MAE, RMSE, R², share within €50/100/200 |
+| Models | Mean, median, linear, ridge, random forest, LightGBM, XGBoost, lasso, elastic net |
+| Serving | FastAPI with validated requests, `/health`, `/model/info`, `/predict` |
+| Quality | pytest suite, GitHub Actions CI, Dockerfile, model card |
+
+## Install
+
+Requires Python 3.10 or newer.
 
 ```bash
-docker build -t berlinrentml:latest .
+git clone https://github.com/<your-username>/berlin-rent-predictor.git
+cd berlin-rent-predictor
+pip install -e ".[dev]"
 ```
 
-### Run Container
+### Get the data
+
+Download `immo_data.csv` from [Kaggle: Apartment rental offers in Germany](https://www.kaggle.com/datasets/corrieaar/apartment-rental-offers-in-germany) and place it in `data/raw/`. Or use the CLI:
 
 ```bash
-docker run -p 8000:8000 berlinrentml:latest
+kaggle datasets download -d corrieaar/apartment-rental-offers-in-germany -p data/raw --unzip
 ```
 
-API will be available at `http://localhost:8000`
+The dataset has 268,850 listings across Germany from 2018 to 2020. The pipeline keeps the 10,406 Berlin rows. The CSV is gitignored. See [data/DATASET.md](data/DATASET.md).
 
----
-
-## 🧪 Testing
+## Common commands
 
 ```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ -v --cov=berlinrentml --cov-report=html
-
-# Run specific test file
-pytest tests/test_features.py -v
+python scripts/train.py            # full pipeline, saves models/final_model_*.joblib
+python scripts/analyze_errors.py   # error by district, size and price range
+python scripts/explain_model.py    # SHAP feature importance
+pytest                             # run tests
 ```
 
-### Test Coverage
+### Docker
 
-- ✅ Data validation
-- ✅ Data cleaning
-- ✅ Feature engineering
-- ✅ Preprocessing (leakage prevention)
-- ✅ Model training
-- ✅ API endpoints
-- ✅ Invalid inputs
+Train first, because the image copies `models/`.
 
----
+```bash
+docker build -t berlin-rent .
+docker run -p 8000:8000 berlin-rent
+```
 
-## 🔄 CI/CD
+## Project layout
 
-GitHub Actions workflow runs on every push:
+```
+src/berlinrentml/
+  data/        loading, validation, cleaning
+  features/    feature engineering, preprocessing
+  modeling/    training, evaluation, split strategies
+  api/         FastAPI service
+scripts/       train, error analysis, SHAP
+tests/         unit and API tests
+```
 
-- Install dependencies
-- Run test suite
-- Check code style (Black, Ruff)
-- Test Python 3.10 and 3.11
+## Limitations
 
-See [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- The data is from 2018 to 2020. Predictions reflect past rents, not today's market.
+- Offered rents are asking prices, not signed contracts.
+- Postal codes unseen in training fall back on the other features, and accuracy drops (about €31 MAE worse than the random split).
+- The final model uses default LightGBM parameters. Tuning is future work.
 
----
+See [MODEL_CARD.md](MODEL_CARD.md) for intended use and ethical considerations.
 
-## 🎓 Key Learnings
+## Troubleshooting
 
-### What Makes This a Serious ML Project
+| Problem | Fix |
+|---|---|
+| `Model not loaded` from `/predict` | Run `python scripts/train.py` first |
+| `No data file found` | Put `immo_data.csv` in `data/raw/` |
+| `UnicodeEncodeError` on Windows | Set `PYTHONUTF8=1` before running scripts |
+| Docker build fails at `COPY models/` | Train first so `models/` has the `.joblib` files |
 
-1. **Real data with real challenges** (missing values, duplicates, outliers)
-2. **Leakage prevention** as first-class requirement
-3. **Geographic generalization** explicitly tested
-4. **Multiple evaluation strategies** compared
-5. **Model selection** based on generalization, not training performance
-6. **Production-ready code** (API, Docker, tests, CI)
-7. **Transparent limitations** documented
+## License
 
-### What This Project Does NOT Do
-
-- ❌ Use fake or generated data
-- ❌ Report only random-split performance
-- ❌ Ignore spatial clustering
-- ❌ Use unnecessary complexity (no Kubernetes, Kafka, etc.)
-- ❌ Deep learning without justification
-- ❌ Claim "production-ready" without evidence
-
----
-
-## 📝 Limitations
-
-- **Geographic scope**: Berlin only, may not generalize to other cities
-- **Temporal drift**: Rental market changes over time, model may degrade
-- **Data currency**: Dataset age affects relevance
-- **Luxury properties**: Model may underperform on unusual/luxury properties
-- **External factors**: Economic conditions, regulations not captured
-- **Feature limitations**: Some relevant factors unavailable (property condition details, neighborhood amenities)
-
----
-
-## 🔮 Future Improvements
-
-- **Uncertainty quantification**: Implement conformal prediction for prediction intervals
-- **Temporal models**: Add time-series features if more recent data available
-- **Geographic features**: Add distance to amenities, public transport
-- **Ensemble methods**: Combine multiple model types
-- **AutoML**: Automated hyperparameter tuning at scale
-- **Online learning**: Update model with new listings
-- **A/B testing**: Compare model versions in production
-- **Fairness analysis**: Check for demographic biases
-
----
-
-## 📚 Documentation
-
-- [SPEC.md](SPEC.md) - Technical specification
-- [PLAN.md](PLAN.md) - Implementation plan
-- [data/DATASET.md](data/DATASET.md) - Dataset documentation
-- [MODEL_CARD.md](MODEL_CARD.md) - Model card (to be created)
-
----
-
-## 🤝 Contributing
-
-This is a portfolio/benchmark project. For issues or suggestions:
-
-1. Fork the repository
-2. Create a feature branch
-3. Run tests (`pytest tests/ -v`)
-4. Submit a pull request
-
----
-
-## 📄 License
-
-MIT License - see LICENSE file
-
----
-
-## 🙏 Acknowledgments
-
-- **Dataset**: Kaggle user corrieaar for the ImmobilienScout24 dataset
-- **Platform**: ImmobilienScout24 for the original listings data
-
----
-
-## 📞 Contact
-
-For questions or feedback about this project, open an issue on GitHub.
-
----
-
-**Built with serious ML engineering practices. No shortcuts. No fake data. No deceptive metrics.**
+MIT. Data from ImmoScout24 via Kaggle, see the dataset page for its terms.

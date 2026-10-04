@@ -98,18 +98,17 @@ Multiple evaluation strategies used:
 
 ### Performance Results
 
-(To be populated after training)
-
 | Split Strategy | MAE (€) | RMSE (€) | R² |
 |----------------|---------|----------|-----|
-| Random Split   | TBD     | TBD      | TBD |
-| Grouped Split  | TBD     | TBD      | TBD |
-| Spatial Holdout| TBD     | TBD      | TBD |
+| Random Split   | 162.30  | 250.52   | 0.880 |
+| Grouped Split (by postal code) | 193.56 | 290.78 | 0.836 |
+
+Final model: LightGBM (default params), 10,388 Berlin listings, ImmoScout24 data from 2018-2020. Median baseline MAE is about €507. Rents are historical, not current.
 
 **Key Findings**:
-- [Random vs. Spatial performance comparison]
-- [Geographic generalization capabilities]
-- [Error patterns by district/size/price]
+- Unseen postal codes cost about €31 MAE vs random split (193.56 vs 162.30)
+- Linear model degrades most on unseen postal codes (186 to 291); LightGBM degrades least
+- See scripts/analyze_errors.py
 
 ## Ethical Considerations
 

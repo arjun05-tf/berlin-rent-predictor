@@ -80,5 +80,10 @@ def load_berlin_data(file_path: Optional[Path] = None) -> pd.DataFrame:
     Returns:
         DataFrame with Berlin data only.
     """
-    df = load_raw_data(file_path)
-    return filter_berlin(df)
+    df = filter_berlin(load_raw_data(file_path))
+    # Map Kaggle schema to pipeline schema; district (Ortsteil) lives in regio3, e.g. "Mitte_Mitte"
+    df = df.rename(columns={"noRooms": "rooms", "balcony": "hasBalcony", "garden": "hasGarden"})
+    if "regio3" in df.columns:
+        df["geo_bln"] = df["regio3"].str.split("_").str[0]
+    df["geo_plz"] = df["geo_plz"].astype(str)
+    return df

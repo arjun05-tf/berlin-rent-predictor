@@ -102,3 +102,14 @@ def test_model_info():
         assert "model_type" in data
         assert "features" in data
         assert "n_features" in data
+
+
+def test_prediction_depends_on_district():
+    """Same flat in different districts must not get the same price."""
+    base = {"livingSpace": 60.0, "rooms": 2.0}
+    with TestClient(app) as c:
+        if not c.get("/health").json()["model_loaded"]:
+            pytest.skip("model not trained")
+        a = c.post("/predict", json={**base, "geo_plz": "10115", "geo_bln": "Mitte"}).json()
+        b = c.post("/predict", json={**base, "geo_plz": "12619", "geo_bln": "Marzahn"}).json()
+    assert a["predicted_rent"] > b["predicted_rent"] * 1.2

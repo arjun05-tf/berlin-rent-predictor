@@ -1,15 +1,10 @@
 """FastAPI application for BerlinRentML."""
 
-import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, field_validator
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from berlinrentml.config import MODELS_DIR
 from berlinrentml.modeling.training import load_model_artifacts
@@ -86,9 +81,9 @@ async def load_model():
             model_dir=MODELS_DIR,
         )
         model_loaded = True
-        print("✅ Model loaded successfully")
+        print("Model loaded successfully")
     except Exception as e:
-        print(f"❌ Failed to load model: {e}")
+        print(f"Failed to load model: {e}")
         print("Run training script first: python scripts/train.py")
         model_loaded = False
 
@@ -179,6 +174,4 @@ async def predict(request: PredictionRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    print("Starting BerlinRentML API...")
-    print("Documentation: http://localhost:8000/docs")
     uvicorn.run(app, host="0.0.0.0", port=8000)
