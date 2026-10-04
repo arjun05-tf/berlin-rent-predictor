@@ -25,6 +25,7 @@ preprocessor = None
 feature_names = None
 model_loaded = False
 interval = None
+load_error = None
 
 REQUEST_LOG = Path(__file__).resolve().parents[3] / "logs" / "requests.jsonl"
 
@@ -89,7 +90,7 @@ def _log_request(data: dict, prediction: float) -> None:
 
 def load_model() -> None:
     """Load model artifacts into module globals."""
-    global model, preprocessor, feature_names, model_loaded, interval
+    global model, preprocessor, feature_names, model_loaded, interval, load_error
 
     try:
         model, preprocessor, feature_names = load_model_artifacts(
@@ -100,6 +101,7 @@ def load_model() -> None:
         model_loaded = True
         print("Model loaded successfully")
     except Exception as e:
+        load_error = f"{type(e).__name__}: {e}"[:300]
         print(f"Failed to load model: {e}")
         print("Run training script first: python scripts/train.py")
         model_loaded = False
@@ -131,6 +133,7 @@ async def health():
     return {
         "status": "healthy" if model_loaded else "model_not_loaded",
         "model_loaded": model_loaded,
+        **({"error": load_error} if load_error else {}),
         "timestamp": datetime.utcnow().isoformat(),
     }
 
