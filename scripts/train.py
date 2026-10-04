@@ -231,10 +231,11 @@ def main():
     print(f"Best grouped split MAE: €{best_score:.2f}")
     print(f"\nModel artifacts saved to: {MODELS_DIR}/")
     print("\nNext steps (run in order):")
-    print("1. python scripts/analyze_errors.py")
-    print("2. python scripts/explain_model.py")
-    print("3. pytest")
-    print("4. streamlit run app/streamlit_app.py")
+    print("1. python scripts/tune.py")
+    print("2. python scripts/analyze_errors.py")
+    print("3. python scripts/explain_model.py")
+    print("4. pytest")
+    print("5. streamlit run app/streamlit_app.py")
 
 
 if __name__ == "__main__":

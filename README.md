@@ -118,6 +118,14 @@ python scripts/explain_model.py    # SHAP feature importance
 pytest                             # run tests
 ```
 
+### Deploy the UI (free)
+
+The trained model files in `models/` are committed (1.5 MB), so the app runs from a fresh clone.
+
+1. Push this repo to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io), click **New app**, pick the repo, branch `main`, main file `app/streamlit_app.py`.
+3. Deploy. The public URL goes at the top of this README.
+
 ### Docker
 
 Train first, because the image copies `models/`.

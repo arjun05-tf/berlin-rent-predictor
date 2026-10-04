@@ -62,6 +62,7 @@ data/processed/*.parquet
 # Model artifacts
 models/*.pkl
 models/*.joblib
+!models/final_model_*.joblib
 models/*.json
 models/checkpoints/
 
