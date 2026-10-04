@@ -1,0 +1,11 @@
+data/
+notebooks/
+docs/
+tests/
+logs/
+mlruns/
+mlflow.db
+app/
+scripts/
+training_output.log
+.github/

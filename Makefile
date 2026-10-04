@@ -1,7 +1,7 @@
 .PHONY: install data train tune analyze explain test app api docker drift all
 
 install:
-	pip install -e ".[dev]"
+	pip install -e ".[dev,train,ui]"
 
 data:
 	kaggle datasets download -d corrieaar/apartment-rental-offers-in-germany -p data/raw --unzip

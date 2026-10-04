@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Berlin Rent Predictor</title>
+<meta name="description" content="Estimate Berlin apartment rent with a 90% prediction range. LightGBM trained on 10k real ImmoScout24 listings.">
+<style>
+  :root {
+    --bg: #fcfcfb; --card: #ffffff; --ink: #0b0b0b; --muted: #52514e; --line: #e4e3df;
+    --accent: #2a78d6; --accent-ink: #ffffff; --band: #dbe8f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1a1a19; --card: #232322; --ink: #ffffff; --muted: #c3c2b7; --line: #3a3a38;
+            --accent: #3987e5; --band: #26364d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 16px 56px; }
+  h1 { font-size: 1.8rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  form { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px;
+         display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+  input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+                  border-radius: 8px; padding: 9px 10px; width: 100%; }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 20px; }
+  .checks label { flex-direction: row; align-items: center; gap: 6px; color: var(--ink); font-size: .95rem; }
+  .checks input { width: auto; }
+  button { grid-column: 1 / -1; font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 12px;
+           background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  button:disabled { opacity: .6; cursor: wait; }
+  #result { margin-top: 24px; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 20px; display: none; }
+  .big { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.03em; margin: 0; }
+  .range { margin: 14px 0 6px; height: 10px; border-radius: 5px; background: var(--band); position: relative; }
+  .range i { position: absolute; top: -4px; width: 4px; height: 18px; border-radius: 2px; background: var(--accent); }
+  .ends { display: flex; justify-content: space-between; font-size: .9rem; color: var(--muted); }
+  .note, footer { color: var(--muted); font-size: .85rem; }
+  .err { color: #c0392b; }
+  footer { margin-top: 32px; }
+  a { color: var(--accent); }
+  @media (max-width: 520px) { form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Berlin Rent Predictor</h1>
+  <p class="sub">Estimated monthly cold rent with a 90% range. Trained on about 10,000 real Berlin listings from 2018&ndash;2020.</p>
+
+  <form id="f">
+    <label>Living space (m²)<input name="livingSpace" type="number" min="10" max="500" step="1" value="60" required></label>
+    <label>Rooms<input name="rooms" type="number" min="0.5" max="20" step="0.5" value="2" required></label>
+    <label>District (Ortsteil)<select name="geo_bln"></select></label>
+    <label>Postal code<select name="geo_plz"></select></label>
+    <label>Condition<select name="condition"></select></label>
+    <label>Heating<select name="heatingType"></select></label>
+    <label>Floor<input name="floor" type="number" min="0" max="50" value="2"></label>
+    <label>Year constructed<input name="yearConstructed" type="number" min="1800" max="2030" value="1990"></label>
+    <div class="checks">
+      <label><input type="checkbox" name="hasKitchen"> Kitchen</label>
+      <label><input type="checkbox" name="hasBalcony"> Balcony</label>
+      <label><input type="checkbox" name="hasGarden"> Garden</label>
+      <label><input type="checkbox" name="cellar"> Cellar</label>
+    </div>
+    <button id="go" type="submit">Predict rent</button>
+  </form>
+
+  <section id="result" aria-live="polite"></section>
+
+  <footer>
+    Historical asking rents, not today's market. Typical error is about &plusmn;&euro;190 on unseen postal codes.
+    <a href="https://github.com/arjun05-tf/berlin-rent-predictor">Source and model card</a>.
+  </footer>
+</main>
+
+<script>
+const f = document.getElementById("f"), out = document.getElementById("result"), go = document.getElementById("go");
+const eur = n => Math.round(n).toLocaleString("en-US") + " €";
+
+fetch("/options.json").then(r => r.json()).then(opts => {
+  for (const [name, values] of Object.entries(opts)) {
+    const sel = f.elements[name];
+    sel.add(new Option(name === "geo_bln" || name === "geo_plz" ? "Choose…" : "Unknown", ""));
+    values.filter(v => v !== "unknown").forEach(v => sel.add(new Option(v.replaceAll("_", " "), v)));
+    sel.options[0].selected = true;
+  }
+  f.elements.geo_bln.value = "Mitte"; f.elements.geo_plz.value = "10115";
+});
+
+f.addEventListener("submit", async e => {
+  e.preventDefault();
+  const d = new FormData(f), body = {};
+  for (const [k, v] of d.entries()) body[k] = v === "" ? null : (isNaN(v) || k === "geo_plz" ? v : Number(v));
+  for (const k of ["hasKitchen", "hasBalcony", "hasGarden", "cellar"]) body[k] = f.elements[k].checked;
+  go.disabled = true; go.textContent = "Predicting…";
+  try {
+    const r = await fetch("/api/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    const p = await r.json(), span = p.interval_high - p.interval_low;
+    const pos = span > 0 ? ((p.predicted_rent - p.interval_low) / span) * 100 : 50;
+    out.innerHTML = `<p class="big">${eur(p.predicted_rent)}<span class="note"> / month</span></p>` +
+      (p.interval_low != null ? `<div class="range"><i style="left:calc(${pos}% - 2px)"></i></div>
+       <div class="ends"><span>${eur(p.interval_low)}</span><span>90% range</span><span>${eur(p.interval_high)}</span></div>` : "") +
+      `<p class="note">About ${(p.predicted_rent / body.livingSpace).toFixed(1)} €/m².</p>`;
+  } catch (err) {
+    out.innerHTML = `<p class="err">Prediction failed: ${err.message}</p>`;
+  } finally {
+    out.style.display = "block"; go.disabled = false; go.textContent = "Predict rent";
+  }
+});
+</script>
+</body>
+</html>

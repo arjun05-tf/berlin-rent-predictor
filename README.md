@@ -21,7 +21,7 @@ Berlin listings cluster by location, so a random train/test split leaks neighbou
 ## Quick start
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev,train,ui]"
 python scripts/train.py            # trains, compares models, saves models/
 python scripts/tune.py             # tuned log-rent model + 90% intervals (overwrites models/)
 python scripts/analyze_errors.py   # error by district, size and price range
@@ -96,7 +96,7 @@ Requires Python 3.10 or newer.
 ```bash
 git clone https://github.com/arjun05-tf/berlin-rent-predictor.git
 cd berlin-rent-predictor
-pip install -e ".[dev]"
+pip install -e ".[dev,train,ui]"
 ```
 
 ### Get the data
@@ -118,13 +118,16 @@ python scripts/explain_model.py    # SHAP feature importance
 pytest                             # run tests
 ```
 
-### Deploy the UI (free)
+### Deploy to Vercel
 
-The trained model files in `models/` are committed (1.5 MB), so the app runs from a fresh clone.
+The repo is Vercel-ready: `public/index.html` is the web form, `api/index.py` serves the FastAPI app as a serverless function at `/api`, and the 1.5 MB model files in `models/` ship with it. Runtime dependencies are pinned in `requirements.txt` to the versions the model was trained with.
 
-1. Push this repo to GitHub.
-2. Go to [share.streamlit.io](https://share.streamlit.io), click **New app**, pick the repo, branch `main`, main file `app/streamlit_app.py`.
-3. Deploy. The public URL goes at the top of this README.
+```bash
+npm i -g vercel
+vercel          # preview deploy, then: vercel --prod
+```
+
+Or import the GitHub repo at [vercel.com/new](https://vercel.com/new). No build settings are needed. If you retrain, run `python scripts/export_options.py` to refresh the dropdown values, then commit `models/` and `public/options.json`. The Streamlit app (`app/`) is for local use, because Vercel cannot host long-lived Streamlit servers.
 
 ### Docker
 

@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from berlinrentml.config import MODELS_DIR
-from berlinrentml.modeling.training import load_conformal, load_model_artifacts
+from berlinrentml.modeling.artifacts import load_conformal, load_model_artifacts
 from berlinrentml.inference import predict_rent
 
 # Initialize FastAPI app
@@ -87,9 +87,8 @@ def _log_request(data: dict, prediction: float) -> None:
         pass
 
 
-@app.on_event("startup")
-async def load_model():
-    """Load model artifacts on startup."""
+def load_model() -> None:
+    """Load model artifacts into module globals."""
     global model, preprocessor, feature_names, model_loaded, interval
 
     try:
@@ -104,6 +103,11 @@ async def load_model():
         print(f"Failed to load model: {e}")
         print("Run training script first: python scripts/train.py")
         model_loaded = False
+
+
+@app.on_event("startup")
+async def _startup():
+    load_model()
 
 
 @app.get("/")

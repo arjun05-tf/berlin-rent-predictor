@@ -4,7 +4,7 @@ import streamlit as st
 
 from berlinrentml.config import MODELS_DIR
 from berlinrentml.inference import predict_rent
-from berlinrentml.modeling.training import load_conformal, load_model_artifacts
+from berlinrentml.modeling.artifacts import load_conformal, load_model_artifacts
 
 st.set_page_config(page_title="Berlin Rent Predictor", page_icon="🏠")
 

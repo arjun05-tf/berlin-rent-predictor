@@ -17,7 +17,10 @@ CONFIG_DIR = PROJECT_ROOT / "config"
 
 # Ensure directories exist
 for dir_path in [RAW_DATA_DIR, PROCESSED_DATA_DIR, MODELS_DIR, LOGS_DIR, CONFIG_DIR]:
-    dir_path.mkdir(parents=True, exist_ok=True)
+    try:
+        dir_path.mkdir(parents=True, exist_ok=True)
+    except OSError:  # read-only filesystem (serverless deploys)
+        pass
 
 
 class Config:

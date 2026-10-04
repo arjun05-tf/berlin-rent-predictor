@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "{src,models}/**",
+      "excludeFiles": "{notebooks,docs,tests,data,logs,mlruns,app,scripts}/**"
+    }
+  },
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }]
+}
