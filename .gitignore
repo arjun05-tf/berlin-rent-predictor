@@ -63,8 +63,8 @@ data/processed/*.parquet
 models/*.pkl
 models/*.joblib
 !models/final_model_*.joblib
-!models/final_model_trees.json
 models/*.json
+!models/final_model_trees.json
 models/checkpoints/
 
 # Logs
