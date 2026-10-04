@@ -233,7 +233,8 @@ def main():
     print("\nNext steps:")
     print("1. Run error analysis: python scripts/analyze_errors.py")
     print("2. Run explainability: python scripts/explain_model.py")
-    print("3. Start API: python src/berlinrentml/api/main.py")
+    print("3. Start UI:  streamlit run app/streamlit_app.py")
+    print("4. Start API: uvicorn berlinrentml.api.main:app --port 8000")
 
 
 if __name__ == "__main__":
