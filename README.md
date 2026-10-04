@@ -67,7 +67,7 @@ LightGBM reaches R² 0.880 on the random split and 0.836 on the grouped split. L
 Requires Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/<your-username>/berlin-rent-predictor.git
+git clone https://github.com/arjun05-tf/berlin-rent-predictor.git
 cd berlin-rent-predictor
 pip install -e ".[dev]"
 ```
