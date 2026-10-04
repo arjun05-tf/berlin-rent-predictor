@@ -146,9 +146,9 @@ class DataValidator:
     def get_summary(self) -> str:
         """Get validation summary."""
         if not self.issues:
-            return "✓ No validation issues found"
+            return "No validation issues found"
 
-        return "Validation issues:\n" + "\n".join(f"  • {issue}" for issue in self.issues)
+        return "Validation issues:\n" + "\n".join(f"  - {issue}" for issue in self.issues)
 
 
 def validate_data(

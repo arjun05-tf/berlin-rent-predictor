@@ -225,7 +225,7 @@ def main():
     )
 
     print("\n" + "="*80)
-    print("✅ Training pipeline complete!")
+    print("Training pipeline complete!")
     print("="*80)
     print(f"\nFinal model: {best_model_name}")
     print(f"Best grouped split MAE: €{best_score:.2f}")
