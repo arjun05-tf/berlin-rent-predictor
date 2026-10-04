@@ -230,11 +230,11 @@ def main():
     print(f"\nFinal model: {best_model_name}")
     print(f"Best grouped split MAE: €{best_score:.2f}")
     print(f"\nModel artifacts saved to: {MODELS_DIR}/")
-    print("\nNext steps:")
-    print("1. Run error analysis: python scripts/analyze_errors.py")
-    print("2. Run explainability: python scripts/explain_model.py")
-    print("3. Start UI:  streamlit run app/streamlit_app.py")
-    print("4. Start API: uvicorn berlinrentml.api.main:app --port 8000")
+    print("\nNext steps (run in order):")
+    print("1. python scripts/analyze_errors.py")
+    print("2. python scripts/explain_model.py")
+    print("3. pytest")
+    print("4. streamlit run app/streamlit_app.py")
 
 
 if __name__ == "__main__":
