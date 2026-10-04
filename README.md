@@ -4,6 +4,8 @@
 
 **Predict Berlin apartment rents. Validated on postal codes the model has never seen.**
 
+[Quick start](#quick-start) · [Results](#results) · [Limitations](#limitations) · [Model card](MODEL_CARD.md)
+
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Model](https://img.shields.io/badge/model-LightGBM-orange)
@@ -12,11 +14,11 @@
 
 </div>
 
-An end-to-end ML system that predicts monthly cold rent (`baseRent`) for Berlin apartments from about 10,000 real ImmoScout24 listings. It cleans the data, engineers features, compares seven models, serves the best one through a FastAPI endpoint, and ships with tests, Docker and CI.
+Enter a flat, get a rent estimate. Trained on about 10,000 real ImmoScout24 Berlin listings and served through a Streamlit UI and a FastAPI endpoint, with tests, Docker and CI.
 
 Berlin listings cluster by location, so a random train/test split leaks neighbourhood information and flatters the score. This project also evaluates with a **postal-code grouped split**, where every test postal code is unseen during training.
 
-## 30-second quick start
+## Quick start
 
 ```bash
 pip install -e ".[dev]"
@@ -46,18 +48,15 @@ Same flat in Marzahn (`"geo_plz": "12619", "geo_bln": "Marzahn"`) returns about 
 
 ## Results
 
-10,388 Berlin listings after cleaning, 80/20 split, final model LightGBM.
+10,388 Berlin listings after cleaning, 80/20 split. LightGBM wins on both splits.
 
-| Model | MAE random (€) | MAE grouped (€) |
-|---|---|---|
-| Mean baseline | 535 | 550 |
-| Median baseline | 509 | 507 |
-| Linear regression | 186 | 291 |
-| Ridge | 186 | 202 |
-| Random forest | 182 | 208 |
-| **LightGBM** | **162** | **194** |
+![MAE by model](docs/model_comparison.png)
 
-LightGBM reaches R² 0.880 on the random split and 0.836 on the grouped split. Linear regression degrades most on unseen postal codes, which is the leakage effect the grouped split is built to expose. The final model is chosen by grouped-split MAE, not random-split MAE.
+- **LightGBM:** R² 0.880 on the random split, 0.836 on unseen postal codes. About 62% lower error than the median baseline.
+- **Leakage is real:** linear regression goes from €186 to €291 once test postal codes are unseen. The final model is picked by grouped-split MAE, not random-split MAE.
+- **Where it fails:** the model is least accurate in expensive central districts and for large flats, which it under-prices.
+
+![MAE by district](docs/error_by_district.png)
 
 ## What is inside
 
