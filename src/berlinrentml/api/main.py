@@ -1,13 +1,15 @@
 """FastAPI application for BerlinRentML."""
 
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from berlinrentml.config import MODELS_DIR
-from berlinrentml.modeling.training import load_model_artifacts
+from berlinrentml.modeling.training import load_conformal, load_model_artifacts
 from berlinrentml.inference import predict_rent
 
 # Initialize FastAPI app
@@ -22,6 +24,9 @@ model = None
 preprocessor = None
 feature_names = None
 model_loaded = False
+interval = None
+
+REQUEST_LOG = Path(__file__).resolve().parents[3] / "logs" / "requests.jsonl"
 
 
 class PredictionRequest(BaseModel):
@@ -57,6 +62,8 @@ class PredictionResponse(BaseModel):
     """Response model for predictions."""
 
     predicted_rent: float = Field(..., description="Predicted monthly cold rent in €")
+    interval_low: Optional[float] = Field(None, description="Lower bound of the 90% prediction interval in €")
+    interval_high: Optional[float] = Field(None, description="Upper bound of the 90% prediction interval in €")
     model_name: str = Field(..., description="Model used for prediction")
     timestamp: str = Field(..., description="Prediction timestamp")
 
@@ -70,16 +77,27 @@ class ModelInfo(BaseModel):
     loaded_at: str
 
 
+def _log_request(data: dict, prediction: float) -> None:
+    """Append request + prediction to a JSONL file for drift monitoring (best effort)."""
+    try:
+        REQUEST_LOG.parent.mkdir(exist_ok=True)
+        with REQUEST_LOG.open("a", encoding="utf8") as f:
+            f.write(json.dumps({**data, "prediction": prediction, "ts": datetime.utcnow().isoformat()}) + "\n")
+    except OSError:
+        pass
+
+
 @app.on_event("startup")
 async def load_model():
     """Load model artifacts on startup."""
-    global model, preprocessor, feature_names, model_loaded
+    global model, preprocessor, feature_names, model_loaded, interval
 
     try:
         model, preprocessor, feature_names = load_model_artifacts(
             model_name="final_model",
             model_dir=MODELS_DIR,
         )
+        interval = load_conformal(MODELS_DIR)
         model_loaded = True
         print("Model loaded successfully")
     except Exception as e:
@@ -134,11 +152,15 @@ async def predict(request: PredictionRequest):
         raise HTTPException(status_code=503, detail="Model not loaded. Run training first.")
 
     try:
-        prediction = predict_rent(request.model_dump(), model, preprocessor, feature_names)
+        result = predict_rent(request.model_dump(), model, preprocessor, feature_names, interval)
+        prediction, low, high = result if interval else (result, None, None)
+        _log_request(request.model_dump(), prediction)
 
         return PredictionResponse(
             predicted_rent=prediction,
-            model_name=model.__class__.__name__,
+            interval_low=low,
+            interval_high=high,
+            model_name=getattr(model, "regressor_", model).__class__.__name__,
             timestamp=datetime.utcnow().isoformat(),
         )
 

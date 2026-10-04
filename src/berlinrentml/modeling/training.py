@@ -132,3 +132,9 @@ def load_model_artifacts(
     feature_names = joblib.load(features_path)
 
     return model, preprocessor, feature_names
+
+
+def load_conformal(model_dir: Path):
+    """Load the conformal interval if one was saved, else None."""
+    path = Path(model_dir) / "final_model_conformal.joblib"
+    return joblib.load(path) if path.exists() else None

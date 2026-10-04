@@ -90,3 +90,5 @@ docs/_build/
 !data/processed/.gitkeep
 !models/.gitkeep
 !logs/.gitkeep
+mlruns/
+mlflow.db

@@ -14,10 +14,10 @@ jobs:
         python-version: ["3.10", "3.11"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -35,14 +35,34 @@ jobs:
       run: |
         python -c "import berlinrentml; print(berlinrentml.__version__)"
 
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - name: Install
+      run: pip install -e ".[dev]"
+    - name: Train on synthetic data (smoke test of the full pipeline)
+      run: |
+        python scripts/generate_synthetic_data.py
+        python scripts/train.py
+    - name: Serve and call /predict
+      run: |
+        uvicorn berlinrentml.api.main:app --port 8000 &
+        sleep 15
+        curl -sf localhost:8000/health
+        curl -sf -X POST localhost:8000/predict -H "Content-Type: application/json"           -d '{"livingSpace": 60, "rooms": 2, "geo_plz": "10115", "geo_bln": "Mitte"}'
+
   lint:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 

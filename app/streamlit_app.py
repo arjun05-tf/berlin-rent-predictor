@@ -4,7 +4,7 @@ import streamlit as st
 
 from berlinrentml.config import MODELS_DIR
 from berlinrentml.inference import predict_rent
-from berlinrentml.modeling.training import load_model_artifacts
+from berlinrentml.modeling.training import load_conformal, load_model_artifacts
 
 st.set_page_config(page_title="Berlin Rent Predictor", page_icon="🏠")
 
@@ -16,14 +16,14 @@ def load():
         f: [str(v) for v in c]
         for f, c in zip(preprocessor.categorical_features, preprocessor.preprocessor.named_transformers_["cat"][-1].categories_)
     }
-    return model, preprocessor, feature_names, cats
+    return model, preprocessor, feature_names, cats, load_conformal(MODELS_DIR)
 
 
 st.title("🏠 Berlin Rent Predictor")
 st.caption("LightGBM trained on ~10k real ImmoScout24 Berlin listings (2018-2020). Historical rents, not today's market.")
 
 try:
-    model, preprocessor, feature_names, cats = load()
+    model, preprocessor, feature_names, cats, interval = load()
 except FileNotFoundError:
     st.error("No trained model found. Run `python scripts/train.py` first.")
     st.stop()
@@ -42,13 +42,16 @@ kitchen, balcony, garden, cellar = (
 )
 
 if st.button("Predict rent", type="primary"):
-    rent = predict_rent(
+    result = predict_rent(
         {
             "livingSpace": space, "rooms": rooms, "floor": floor, "yearConstructed": year,
             "geo_plz": plz, "geo_bln": district, "condition": condition, "heatingType": heating,
             "hasKitchen": kitchen, "hasBalcony": balcony, "hasGarden": garden, "cellar": cellar,
         },
-        model, preprocessor, feature_names,
+        model, preprocessor, feature_names, interval,
     )
+    rent, low, high = result if interval else (result, None, None)
     st.metric("Predicted cold rent (€/month)", f"{rent:,.0f} €")
-    st.caption(f"≈ {rent / space:.1f} €/m². Typical error is about ±€190 (grouped-split MAE).")
+    if interval:
+        st.write(f"**90% range: {low:,.0f} to {high:,.0f} €**")
+    st.caption(f"≈ {rent / space:.1f} €/m². Typical error is about ±€190 on unseen postal codes.")
