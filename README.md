@@ -120,7 +120,7 @@ pytest                             # run tests
 
 ### Deploy to Vercel
 
-The repo is Vercel-ready: `public/index.html` is the web form, `api/index.py` serves the FastAPI app as a serverless function at `/api`, and the 1.5 MB model files in `models/` ship with it. Runtime dependencies are pinned in `requirements.txt` to the versions the model was trained with.
+The repo is Vercel-ready: `public/index.html` is the web form, `api/index.py` serves the FastAPI app as a serverless function (`/api/index?r=predict`, `/api/index?r=health`), and the 1.5 MB model files in `models/` ship with it. Runtime dependencies are pinned in `requirements.txt` to the versions the model was trained with.
 
 ```bash
 npm i -g vercel

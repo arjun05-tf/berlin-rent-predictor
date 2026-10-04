@@ -97,7 +97,7 @@ f.addEventListener("submit", async e => {
   for (const k of ["hasKitchen", "hasBalcony", "hasGarden", "cellar"]) body[k] = f.elements[k].checked;
   go.disabled = true; go.textContent = "Predicting…";
   try {
-    const r = await fetch("/api/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch("/api/index?r=predict", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
     const p = await r.json(), span = p.interval_high - p.interval_low;
     const pos = span > 0 ? ((p.predicted_rent - p.interval_low) / span) * 100 : 50;
