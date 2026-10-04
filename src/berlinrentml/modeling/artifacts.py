@@ -29,7 +29,12 @@ def load_model_artifacts(
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
 
-    model = joblib.load(model_path)
+    try:
+        model = joblib.load(model_path)
+    except Exception:  # lightgbm/libgomp unavailable (serverless): use the portable numpy forest
+        from berlinrentml.modeling.portable import PortableLGBM
+
+        model = PortableLGBM.load(model_dir / f"{model_name}_trees.json")
     preprocessor = joblib.load(preprocessor_path)
     feature_names = joblib.load(features_path)
 

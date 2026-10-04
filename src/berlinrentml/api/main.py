@@ -167,7 +167,7 @@ async def predict(request: PredictionRequest):
             predicted_rent=prediction,
             interval_low=low,
             interval_high=high,
-            model_name=getattr(model, "regressor_", model).__class__.__name__,
+            model_name="LGBMRegressor",
             timestamp=datetime.utcnow().isoformat(),
         )
 
