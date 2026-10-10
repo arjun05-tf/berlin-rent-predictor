@@ -19,16 +19,16 @@ Enter a flat, get a rent estimate. Trained on about 10,000 real ImmoScout24 Berl
 
 Berlin listings cluster by location, so a random train/test split leaks neighbourhood information and flatters the score. This project also evaluates with a **postal-code grouped split**, where every test postal code is unseen during training.
 
-> The spinning cloud above is not decoration: it is a PCA of the real cleaned
-> listings, one dot per flat, positioned by its engineered features and coloured
-> by rent quintile. Regenerate it with
-> `python .github/assets/make_assets.py`.
+> The elevation above is not decoration: every block is a real flat from
+> `data/processed/berlin_processed.csv`, its height set by that flat's monthly
+> rent and its width by its floor area, sampled evenly across the market.
+> Redraw it with `python .github/assets/make_assets.py`.
 
 ---
 
 ## Pipeline
 
-<img src=".github/assets/pipeline.svg" alt="Clean, engineer features, split by postal code, fit LightGBM, calibrate intervals" width="100%">
+<img src=".github/assets/pipeline.svg" alt="Method: clean, engineer features, split by postal code, fit, calibrate" width="100%">
 
 ---
 
