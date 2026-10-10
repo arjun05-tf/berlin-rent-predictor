@@ -1,22 +1,36 @@
 <div align="center">
 
-# BerlinRentML
+<img src=".github/assets/hero.svg" alt="BerlinRentML: gradient boosting rent estimates for Berlin, scored on unseen postal codes" width="100%">
 
-**Predict Berlin apartment rents. Validated on postal codes the model has never seen.**
+<br>
+
+![Python](https://img.shields.io/badge/python-3.10%2B-f2b53c?style=flat-square&labelColor=0b0f14)
+![Model](https://img.shields.io/badge/model-LightGBM-4ade80?style=flat-square&labelColor=0b0f14)
+![Serving](https://img.shields.io/badge/serving-FastAPI-4cc9f0?style=flat-square&labelColor=0b0f14)
+![Listings](https://img.shields.io/badge/listings-10%2C388-a78bfa?style=flat-square&labelColor=0b0f14)
+![MAE](https://img.shields.io/badge/MAE%20unseen%20PLZ-%E2%82%AC191-e0564f?style=flat-square&labelColor=0b0f14)
+![License](https://img.shields.io/badge/license-MIT-8b98a6?style=flat-square&labelColor=0b0f14)
 
 [Quick start](#quick-start) · [Results](#results) · [Limitations](#limitations) · [Model card](MODEL_CARD.md)
-
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Model](https://img.shields.io/badge/model-LightGBM-orange)
-![API](https://img.shields.io/badge/API-FastAPI-009688)
-![Docker](https://img.shields.io/badge/docker-ready-2496ED)
 
 </div>
 
 Enter a flat, get a rent estimate. Trained on about 10,000 real ImmoScout24 Berlin listings and served through a Streamlit UI and a FastAPI endpoint, with tests, Docker and CI.
 
 Berlin listings cluster by location, so a random train/test split leaks neighbourhood information and flatters the score. This project also evaluates with a **postal-code grouped split**, where every test postal code is unseen during training.
+
+> The spinning cloud above is not decoration: it is a PCA of the real cleaned
+> listings, one dot per flat, positioned by its engineered features and coloured
+> by rent quintile. Regenerate it with
+> `python .github/assets/make_assets.py`.
+
+---
+
+## Pipeline
+
+<img src=".github/assets/pipeline.svg" alt="Clean, engineer features, split by postal code, fit LightGBM, calibrate intervals" width="100%">
+
+---
 
 ## Quick start
 
@@ -51,13 +65,13 @@ Same flat in Marzahn (`"geo_plz": "12619", "geo_bln": "Marzahn"`) returns about 
 
 10,388 Berlin listings after cleaning, 80/20 split. LightGBM wins on both splits.
 
-![MAE by model](docs/model_comparison.png)
+<img src=".github/assets/leakage.svg" alt="Mean absolute error per model, random split against postal-code grouped split" width="100%">
 
 - **LightGBM:** R² 0.880 on the random split, 0.836 on unseen postal codes. About 62% lower error than the median baseline.
 - **Leakage is real:** linear regression goes from €186 to €291 once test postal codes are unseen. The final model is picked by grouped-split MAE, not random-split MAE.
 - **Where it fails:** the model is least accurate in expensive central districts and for large flats, which it under-prices.
 
-![MAE by district](docs/error_by_district.png)
+<img src=".github/assets/districts.svg" alt="Mean absolute error by district on the random test set" width="100%">
 
 ## Beyond a baseline
 
